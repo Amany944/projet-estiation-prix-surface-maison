@@ -1,65 +1,114 @@
-# This workflow will build a Python app and deploy it to an Azure Functions App on Linux when a commit is pushed to your default branch.
+# Déploiement de l'API (FastAPI + modèle scikit-learn) sur Azure Functions.
 #
-# This workflow assumes you have already created the target Azure Functions app.
-# For instructions see https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-vs-code-python?pivots=python-mode-configuration
+# Particularité de ce projet : le même service sert l'API ET le frontend React
+# compilé (voir le `app.mount("/", StaticFiles(...))` dans backend/app/main.py).
+# Le workflow compile donc Vite, puis assemble un dossier autonome
+# (`azure-package/`) contenant exactement ce que le runtime Azure attend.
 #
-# To configure this workflow:
-# 1. Set up the following secrets in your repository:
-#   - AZURE_FUNCTIONAPP_PUBLISH_PROFILE
-# 2. Change env variables for your configuration.
-#
-# For more information on:
-#   - GitHub Actions for Azure: https://github.com/Azure/Actions
-#   - Azure Functions Action: https://github.com/Azure/functions-action
-#   - Publish Profile: https://github.com/Azure/functions-action#using-publish-profile-as-deployment-credential-recommended
-#   - Azure Service Principal for RBAC: https://github.com/Azure/functions-action#using-azure-service-principal-for-rbac-as-deployment-credential
-#
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples/tree/master/FunctionApp
+# Secrets / variables à définir dans GitHub (Settings > Secrets and variables
+# > Actions) :
+#   - secret   AZURE_FUNCTIONAPP_PUBLISH_PROFILE  : contenu du profil de
+#                publication téléchargé depuis le portail Azure
+#                (Function App > Vue d'ensemble > Obtenir le profil de publication)
+#   - variable AZURE_FUNCTIONAPP_NAME             : nom de la Function App
+#                (facultatif, sinon la valeur par défaut ci-dessous est utilisée)
 
 name: Deploy Python project to Azure Function App
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_NAME: 'your-app-name'   # set this to your function app name on Azure
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'       # set this to the path to your function app project, defaults to the repository root
-  PYTHON_VERSION: '3.9'                     # set this to the python version to use (e.g. '3.6', '3.7', '3.8')
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: azure-package
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
 
 jobs:
-  build-and-deploy:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    environment: dev
+
     steps:
-    - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v4
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
 
-    # If you want to use Azure RBAC instead of Publish Profile, then uncomment the task below
-    # - name: 'Login via Azure CLI'
-    #   uses: azure/login@v1
-    #   with:
-    #     creds: ${{ secrets.AZURE_RBAC_CREDENTIALS }} # set up AZURE_RBAC_CREDENTIALS secrets in your repository
+      # ---------------------------------------------------------------- #
+      # 1. Frontend : compilation Vite                                    #
+      # ---------------------------------------------------------------- #
+      - name: Installer Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Api-python-js/package-lock.json
 
-    - name: Setup Python ${{ env.PYTHON_VERSION }} Environment
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Compiler le frontend
+        working-directory: Api-python-js
+        run: |
+          # `.env.production` fixe VITE_API_URL=/ : les appels partent de la
+          # même origine que la page, donc aucun problème de CORS en production.
+          npm ci
+          npm run build
 
-    - name: 'Resolve Project Dependencies Using Pip'
-      shell: bash
-      run: |
-        pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt --target=".python_packages/lib/site-packages"
-        popd
+      # ---------------------------------------------------------------- #
+      # 2. Backend : dépendances et tests                                 #
+      # ---------------------------------------------------------------- #
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
-    - name: 'Run Azure Functions Action'
-      uses: Azure/functions-action@v1
-      id: fa
-      with:
-        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }} # Remove publish-profile to use Azure RBAC
-        scm-do-build-during-deployment: true
-        enable-oryx-build: true
+      - name: Installer les dépendances Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Lancer les tests du backend
+        run: python -m pytest backend/tests -q
+
+      # ---------------------------------------------------------------- #
+      # 3. Assemblage du paquet déployé                                    #
+      # ---------------------------------------------------------------- #
+      # Azure Functions exige une racine de paquet plate : function_app.py,
+      # host.json et requirements.txt au premier niveau. On ne déploie donc
+      # pas tout le dépôt (notebooks, second frontend, etc.), mais uniquement
+      # le strict nécessaire.
+      - name: Assembler le paquet Azure
+        run: |
+          set -euo pipefail
+          PKG="${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+          rm -rf "$PKG"
+          mkdir -p "$PKG"
+
+          cp function_app.py host.json "$PKG"/
+          cp -R backend "$PKG"/backend
+          cp -R models "$PKG"/models
+          mkdir -p "$PKG/Api-python-js"
+          cp -R Api-python-js/dist "$PKG"/Api-python-js/dist
+          cp backend/requirements.txt "$PKG"/requirements.txt
+
+          # Nettoyage : caches inutiles et volumineux dans le paquet.
+          find "$PKG" -name '__pycache__' -type d -prune -exec rm -rf {} +
+          find "$PKG" -name '*.pyc' -delete
+
+          echo "--- contenu du paquet ---"
+          du -sh "$PKG"
+          ls -1 "$PKG"
+
+      # ---------------------------------------------------------------- #
+      # 4. Déploiement                                                    #
+      # ---------------------------------------------------------------- #
+      - name: Déployer sur Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME || 'prix-immobilier-api' }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          # Oryx installe requirements.txt côté Azure : pas de binaires
+          # compilés pour une autre plateforme dans le paquet.
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true

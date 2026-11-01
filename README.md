@@ -153,6 +153,37 @@ docker compose up --build
 **navigateur**, pas par le conteneur frontend : le nom de service `backend` ne
 résoudrait pas côté client.
 
+## Déploiement Azure Functions (GitHub Actions)
+
+Le workflow `.github/workflows/azure-functions-app-python.yml` se déclenche à
+chaque `push` sur `main` (ou manuellement via *Run workflow*) et enchaîne :
+compilation Vite → installation Python → `pytest` → assemblage du paquet →
+déploiement.
+
+Deux fichiers rendent cela possible :
+
+- **`function_app.py`** — point d'entrée attendu par Azure. Il n'enveloppe
+  l'application FastAPI existante (`func.AsgiFunctionApp`) : aucune route n'est
+  dupliquée. Il charge aussi le modèle explicitement, car Functions n'exécute
+  pas l'événement `lifespan` de FastAPI.
+- **`host.json`** — `routePrefix` vide, pour que le catch-all `/{*route}`
+  reçoive `/api/predict` tel quel (sinon Azure réserve le préfixe `/api`).
+
+Étapes à faire une seule fois dans le portail Azure :
+
+1. Créer une **Function App** (Python 3.12, plan Consumption ou Flex).
+2. Récupérer le profil de publication (*Vue d'ensemble → Obtenir le profil de
+   publication*).
+3. Dans GitHub : *Settings → Secrets and variables → Actions*
+   - secret `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` = contenu du fichier XML ;
+   - variable `AZURE_FUNCTIONAPP_NAME` = nom de la Function App (le workflow a
+     une valeur par défaut, à adapter ou à surcharger ici).
+
+Le paquet déployé (`azure-package/`, non versionné) contient `function_app.py`,
+`host.json`, `backend/`, `models/` et `Api-python-js/dist/`. Le frontend étant
+compilé avec `VITE_API_URL=/`, il appelle l'API sur la même origine : une seule
+URL sert la page et les prédictions.
+
 ## Tests
 
 ```bash

@@ -51,3 +51,6 @@ Thumbs.db
 # Archives et exports temporaires
 *.zip
 *.tar.gz
+
+# Paquet assemblé par le workflow Azure (artefact de build, jamais versionné)
+azure-package/
