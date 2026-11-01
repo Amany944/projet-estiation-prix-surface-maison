@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Ce fichier contrôle ce qui est envoyé à GitHub (Docker et GitHub lisent deux
+# fichiers différents : .dockerignore pour l'image, .gitignore pour le dépôt).
+# ---------------------------------------------------------------------------
+
+# Python : fichiers générés à l'exécution
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Environnements virtuels (jamais versionnés : ce sont des milliers de fichiers
+# propres à ta machine, réinstallables avec pip install -r requirements.txt)
+myenv/
+venv/
+.venv/
+env/
+ENV/
+
+# Secrets et configuration locale
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!.env.example
+
+# Node / Vite (réinstallables avec npm install, régénérables avec npm run build)
+node_modules/
+dist/
+dist-ssr/
+.vite/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# Éditeurs et système
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archives et exports temporaires
+*.zip
+*.tar.gz

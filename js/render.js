@@ -1,0 +1,1 @@
+root = document.getElementById("root");

@@ -1,0 +1,46 @@
+{
+  "algorithme": "RandomForestRegressor",
+  "features": [
+    "superficie_m2",
+    "nb_pieces",
+    "age_annees",
+    "quartier"
+  ],
+  "features_numeriques": [
+    "superficie_m2",
+    "nb_pieces",
+    "age_annees"
+  ],
+  "features_categorielles": [
+    "quartier"
+  ],
+  "quartiers": [
+    "Plateau",
+    "Cocody",
+    "Marcory",
+    "Yopougon",
+    "Bingerville"
+  ],
+  "target": "prix_fcfa",
+  "unite": "FCFA",
+  "jeu_de_donnees": "synthétique — démonstration, non fiable en production",
+  "entraine_le": "2026-10-31T23:51:52+00:00",
+  "echantillons": {
+    "train": 2400,
+    "test": 600
+  },
+  "selection_modele": {
+    "LinearRegression": 0.8692,
+    "RandomForestRegressor": 0.9491,
+    "HistGradientBoostingRegressor": 0.9431
+  },
+  "metriques_test": {
+    "r2": 0.9445,
+    "mae": 4108568.6,
+    "rmse": 6996061.01
+  },
+  "intervalle_80": {
+    "quantile_bas": -0.112766,
+    "quantile_haut": 0.152805
+  }
+}

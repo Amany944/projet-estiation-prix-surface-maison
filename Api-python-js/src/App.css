@@ -1,0 +1,487 @@
+/* Mise en page et composants de l'application d'estimation. */
+
+.page {
+  width: 100%;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 56px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 32px 16px 48px;
+    gap: 16px;
+  }
+}
+
+/* ---------- En-tête ---------- */
+
+.entete {
+  max-width: 60ch;
+}
+
+.surtitre {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(32px, 5vw, 46px);
+  font-weight: 500;
+  margin: 10px 0 12px;
+}
+
+.entete-texte {
+  font-size: 16px;
+  max-width: 56ch;
+}
+
+/* ---------- Panneaux ---------- */
+
+.panneau {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 24px;
+}
+
+@media (max-width: 640px) {
+  .panneau {
+    padding: 18px;
+  }
+}
+
+.panneau-titre {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--encre);
+  margin-bottom: 18px;
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .grille {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Formulaire ---------- */
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.champs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 420px) {
+  .champs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.champ--large {
+  grid-column: 1 / -1;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.champ label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--encre);
+}
+
+.champ-saisie {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.champ-saisie input,
+.champ-saisie select {
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  color: var(--encre);
+  background: var(--surface-douce);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  padding: 11px 12px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  appearance: none;
+}
+
+.champ-saisie select {
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--texte) 50%),
+    linear-gradient(135deg, var(--texte) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.champ-saisie input:hover,
+.champ-saisie select:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--bordure));
+}
+
+.champ-saisie input:focus,
+.champ-saisie select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+
+.champ-saisie input:disabled,
+.champ-saisie select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.champ-saisie input[type='number']::-webkit-outer-spin-button,
+.champ-saisie input[type='number']::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.champ-saisie input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.unite {
+  position: absolute;
+  right: 12px;
+  font-size: 13px;
+  color: var(--texte);
+  pointer-events: none;
+}
+
+.champ-saisie input:has(+ .unite) {
+  padding-right: 42px;
+}
+
+/* ---------- Bouton ---------- */
+
+.bouton {
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: var(--rayon-petit);
+  padding: 13px 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bouton {
+    color: #06231b;
+  }
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--accent-fonce);
+}
+
+.bouton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.bouton:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.rotateur {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: rotation 0.7s linear infinite;
+}
+
+@keyframes rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Erreur ---------- */
+
+.alerte {
+  font-size: 14px;
+  color: var(--alerte);
+  background: var(--alerte-fond);
+  border: 1px solid color-mix(in srgb, var(--alerte) 25%, transparent);
+  border-radius: var(--rayon-petit);
+  padding: 10px 12px;
+}
+
+/* ---------- Résultat ---------- */
+
+.resultat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 24px;
+}
+
+@media (max-width: 880px) {
+  .resultat {
+    position: static;
+  }
+}
+
+.vide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 8px;
+  text-align: center;
+  color: var(--texte);
+  font-size: 14px;
+}
+
+.vide-titre {
+  font-weight: 600;
+  color: var(--encre);
+  font-size: 15px;
+}
+
+.prix {
+  font-family: var(--serif);
+  font-size: clamp(34px, 6vw, 44px);
+  line-height: 1;
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  letter-spacing: -0.02em;
+}
+
+.prix-unite {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--texte);
+  text-transform: uppercase;
+}
+
+/* Barre de fourchette : le marqueur montre où se situe l'estimation. */
+.fourchette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fourchette-barre {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-doux), var(--accent));
+  opacity: 0.9;
+}
+
+.fourchette-marqueur {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.fourchette-bornes {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fourchette-legende {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.recap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--bordure);
+  padding-top: 16px;
+}
+
+.recap li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.recap li span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.recap li strong {
+  color: var(--encre);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.note,
+.avertissement {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texte);
+  opacity: 0.85;
+}
+
+.note {
+  border-left: 2px solid var(--bordure);
+  padding-left: 10px;
+}
+
+/* ---------- Encart modèle ---------- */
+
+.modele {
+  background: var(--surface-douce);
+}
+
+.metriques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.metriques dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+  margin-bottom: 3px;
+}
+
+.metriques dd {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+}
+
+.comparaison {
+  border-top: 1px solid var(--bordure);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+
+.comparaison-titre {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.comparaison ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comparaison li {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.4fr) 2fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.comparaison li span:first-child {
+  color: var(--encre);
+}
+
+.comparaison li strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--encre);
+}
+
+@media (max-width: 520px) {
+  .comparaison li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .comparaison li .barre {
+    display: none;
+  }
+}
+
+.barre {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bordure) 70%, transparent);
+  overflow: hidden;
+}
+
+.barre-remplissage {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.75;
+}
+
+.avertissement {
+  border-top: 1px solid var(--bordure);
+  padding-top: 14px;
+}
