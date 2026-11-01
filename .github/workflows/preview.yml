@@ -1,0 +1,132 @@
+# Aperçu visuel éphémère de l'application, servi depuis GitHub Actions.
+#
+# Objectif : voir l'interface réellement rendue (React + API + modèle) sans
+# compte Azure. Le runner compile le frontend, démarre FastAPI sur le même port,
+# puis ouvre un tunnel public temporaire (cloudflared).
+#
+# L'URL est écrite :
+#   - dans le résumé du run (onglet « Summary ») ;
+#   - dans la branche `preview`, fichier `preview-url.txt`.
+#
+# L'aperçu vit tant que le job tourne (40 min), puis meurt avec le runner.
+# Ce n'est PAS un déploiement de production : c'est une fenêtre de démonstration.
+
+name: Aperçu éphémère
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apercu-ephemere
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Api-python-js/package-lock.json
+
+      - name: Compiler le frontend
+        working-directory: Api-python-js
+        run: |
+          npm ci
+          npm run build
+
+      - name: Installer Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Installer les dépendances Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Démarrer l'API et le frontend (port 8000)
+        run: |
+          nohup python -m uvicorn backend.app.main:app \
+            --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          disown
+
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8000/health > /tmp/health.json; then
+              break
+            fi
+            sleep 2
+          done
+
+          echo "--- /health ---"; cat /tmp/health.json
+          echo "--- page d'accueil ---"
+          curl -s -o /dev/null -w "index.html : HTTP %{http_code}\n" http://127.0.0.1:8000/
+          echo "--- prédiction de contrôle ---"
+          curl -s -X POST http://127.0.0.1:8000/api/predict \
+            -H "Content-Type: application/json" \
+            -d '{"superficie_m2":80,"nb_pieces":4,"age_annees":2,"quartier":"Cocody"}'
+
+      - name: Ouvrir le tunnel public
+        run: |
+          curl -sL -o /tmp/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+
+          nohup /tmp/cloudflared tunnel --url http://127.0.0.1:8000 --no-autoupdate \
+            > /tmp/tunnel.log 2>&1 &
+          disown
+
+          URL=""
+          for i in $(seq 1 45); do
+            URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/tunnel.log | head -1 || true)
+            [ -n "$URL" ] && break
+            sleep 2
+          done
+
+          if [ -z "$URL" ]; then
+            echo "Le tunnel n'a pas démarré. Journal :"
+            cat /tmp/tunnel.log
+            exit 1
+          fi
+
+          echo "URL=$URL" >> "$GITHUB_ENV"
+          echo "Aperçu disponible : $URL"
+
+      - name: Publier l'URL
+        run: |
+          {
+            echo "## Aperçu de l'application"
+            echo ""
+            echo "### 👉 $URL"
+            echo ""
+            echo "L'API et le frontend tournent sur ce même lien (`/docs` pour Swagger)."
+            echo "L'aperçu s'arrête à la fin du job (40 min) ou au prochain déclenchement."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "$URL" > preview-url.txt
+          git checkout -q -B preview
+          git add preview-url.txt
+          git commit -q -m "Aperçu éphémère : $URL"
+          git push -q -f origin preview
+
+      - name: Garder l'aperçu en ligne
+        run: |
+          echo "Aperçu en ligne : $URL (40 min)"
+          sleep 2400
